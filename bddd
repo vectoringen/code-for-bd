@@ -1,0 +1,1096 @@
+Подключение к бд
+
+
+
+namespace Avtoservis
+
+{
+
+    internal class Db
+
+    {
+
+        MySqlConnection connection = new MySqlConnection("server=localhost;Port=3306;Database=avtoservic;Uid=root;Pwd=;");
+
+        public void openConnection()
+
+        {
+
+            if (connection.State == System.Data.ConnectionState.Closed)
+
+                connection.Open();
+
+        }
+
+        public void closeConnection()
+
+        {
+
+            if (connection.State == System.Data.ConnectionState.Open)
+
+                connection.Close();
+
+        }
+
+        public MySqlConnection getConnection()
+
+        {
+
+            return connection;
+
+        }
+
+
+
+    }
+
+}
+
+
+
+
+
+Окно регистрации
+
+
+
+namespace Avtoservis
+
+{
+
+    public partial class Form1 : Form
+
+    {
+
+        public Form1()
+
+        {
+
+            InitializeComponent();
+
+        }
+
+
+
+        private void Form1_Load(object sender, EventArgs e)
+
+        {
+
+
+
+        }
+
+
+
+        private void label1_Click(object sender, EventArgs e)
+
+        {
+
+
+
+        }
+
+
+
+        private void button1_Click(object sender, EventArgs e)
+
+        {
+
+            String loginUser = textBox1.Text;
+
+            String passUser = textBox2.Text;
+
+            Db Db = new Db();
+
+            DataTable table = new DataTable();
+
+            MySqlDataAdapter adapter = new MySqlDataAdapter();
+
+            MySqlCommand command = new MySqlCommand("SELECT * FROM `registration` WHERE `Login` = @ul AND `Password` = @up", Db.getConnection());
+
+            command.Parameters.Add("@ul", MySqlDbType.VarChar).Value = loginUser;
+
+            command.Parameters.Add("@up", MySqlDbType.VarChar).Value = passUser;
+
+            adapter.SelectCommand = command;
+
+            adapter.Fill(table);
+
+            if (table.Rows.Count > 0)
+
+            {
+
+                Form2 form2 = new Form2();
+
+                form2.Show();
+
+                this.Hide();
+
+            }
+
+            else
+
+                MessageBox.Show("Неверное имя пользователя или пароль.");
+
+        }
+
+    }
+
+}
+
+
+
+
+
+Подключение Датагрью, кнопка удаления, переход на новую форму с полной инфо
+
+
+
+namespace Avtoservis
+
+{
+
+    public partial class Form2 : Form
+
+    {
+
+        Db db = new Db();
+
+        private int selectedId;
+
+        public Form2()
+
+        {
+
+            InitializeComponent();
+
+            this.Load += new EventHandler(Form2_Load);
+
+            dataGridView1.DoubleClick += new EventHandler(dataGridView1_DoubleClick);
+
+
+
+        }
+
+
+
+        private void Form2_Load(object sender, EventArgs e)
+
+        {
+
+            string query = "SELECT * FROM generalapplications";
+
+            MySqlCommand command = new MySqlCommand(query, db.getConnection());
+
+            MySqlDataAdapter adapter = new MySqlDataAdapter(command);
+
+            DataTable table = new DataTable();
+
+            adapter.Fill(table);
+
+            dataGridView1.DataSource = table;
+
+        }
+
+        private void dataGridView1_DoubleClick(object sender, EventArgs e)
+
+        {
+
+            try
+
+            {
+
+                if (dataGridView1.SelectedRows.Count > 0)
+
+                {
+
+                    int selectedId = (int)dataGridView1.CurrentRow.Cells["ApplicationNomber"].Value;
+
+                    DetailsForm detailForm = new DetailsForm(selectedId);
+
+                    detailForm.ShowDialog();
+
+                }
+
+            }
+
+            catch (Exception ex)
+
+            {
+
+                MessageBox.Show("Ошибка при открытии подробной информации: " + ex.Message);
+
+            }
+
+        }
+
+
+
+        private void button1_Click(object sender, EventArgs e)
+
+        {
+
+            // Проверяем, есть ли выбранная запись в DataGridView
+
+            if (dataGridView1.SelectedRows.Count > 0)
+
+            {
+
+                // Получаем ID записи для удаления
+
+                string visitID = dataGridView1.SelectedRows[0].Cells["ApplicationNomber"].Value.ToString();
+
+
+
+                // Создаем DELETE-запрос для таблицы "Посещения"
+
+                string visitQuery = "DELETE FROM generalapplications WHERE ApplicationNomber = @ID";
+
+
+
+                // Создаем объект MySqlCommand для удаления записи из таблицы "Посещения"
+
+                MySqlCommand visitCommand = new MySqlCommand(visitQuery, db.getConnection());
+
+                visitCommand.Parameters.AddWithValue("@ID", visitID);
+
+
+
+                try
+
+                {
+
+                    // Открываем соединение, выполняем запрос и закрываем соединение
+
+                    db.openConnection();
+
+                    visitCommand.ExecuteNonQuery();
+
+                    db.closeConnection();
+
+
+
+                    // Обновляем DataGridView после удаления записи
+
+                    UpdatedataGridView1();
+
+
+
+                    // Оповещаем пользователя об успешном удалении записи
+
+                    MessageBox.Show("Запись успешно удалена из таблицы generalapplications.", "Успех", MessageBoxButtons.OK, MessageBoxIcon.Information);
+
+                }
+
+                catch (MySqlException ex)
+
+                {
+
+                    // Обработка ошибки при выполнении запроса
+
+                    MessageBox.Show("Ошибка при удалении записи: " + ex.Message, "Ошибка", MessageBoxButtons.OK, MessageBoxIcon.Error);
+
+                }
+
+            }
+
+            else
+
+            {
+
+                // Если нет выбранной записи, выводим сообщение
+
+                MessageBox.Show("Выберите запись для удаления.", "Предупреждение", MessageBoxButtons.OK, MessageBoxIcon.Warning);
+
+            }
+
+        }
+
+
+
+        private void UpdatedataGridView1()
+
+        {
+
+            string query = "SELECT * FROM generalapplications";
+
+            MySqlCommand command = new MySqlCommand(query, db.getConnection());
+
+            MySqlDataAdapter adapter = new MySqlDataAdapter(command);
+
+            DataTable table = new DataTable();
+
+            adapter.Fill(table);
+
+            dataGridView1.DataSource = table;
+
+        }
+
+
+
+        private void Form2_Load_1(object sender, EventArgs e)
+
+        {
+
+
+
+        }
+
+    }
+
+}
+
+
+
+
+
+
+
+Отображение данных из бд в текстбоксы + открытие формы редактирования 
+
+
+
+namespace Avtoservis
+
+{
+
+    public partial class DetailsForm : Form
+
+    {
+
+        Db db = new Db();
+
+        private int _summaryId;
+
+        private DataTable table;
+
+
+
+        public DetailsForm(int summaryId)
+
+        {
+
+            InitializeComponent();
+
+            _summaryId = summaryId;
+
+            this.Load += new EventHandler(DetailsForm_Load);
+
+        }
+
+
+
+        private void DetailsForm_Load(object sender, EventArgs e)
+
+        {
+
+            try
+
+            {
+
+                string query = "SELECT * FROM `application` WHERE ApplicationNomber = @ApplicationNomber";
+
+                using (MySqlConnection connection = db.getConnection())
+
+                {
+
+                    connection.Open();
+
+                    using (MySqlCommand command = new MySqlCommand(query, connection))
+
+                    {
+
+                        command.Parameters.AddWithValue("@ApplicationNomber", _summaryId);
+
+                        MySqlDataAdapter adapter = new MySqlDataAdapter(command);
+
+                        table = new DataTable();
+
+                        adapter.Fill(table);
+
+                        ShowClientDetails(0);
+
+                    }
+
+                }
+
+            }
+
+            catch (Exception ex)
+
+            {
+
+                MessageBox.Show("Ошибка загрузки данных: " + ex.Message);
+
+            }
+
+        }
+
+
+
+        private void ShowClientDetails(int rowIndex)
+
+        {
+
+            if (rowIndex < table.Rows.Count)
+
+            {
+
+                textBox1.Text = GetSafeString(table.Rows[rowIndex]["ProblemPescription"]);
+
+                textBox2.Text = GetSafeString(table.Rows[rowIndex]["TypeOfCar"]);
+
+                textBox3.Text = GetSafeString(table.Rows[rowIndex]["CardBrand"]);
+
+                textBox4.Text = GetSafeString(table.Rows[rowIndex]["Master"]);
+
+                textBox5.Text = GetSafeString(table.Rows[rowIndex]["ClientFIO"]);
+
+                textBox6.Text = GetSafeString(table.Rows[rowIndex]["ClientNumber"]);
+
+
+
+                // Добавляем проверку на нулевую дату
+
+                textBox7.Text = GetSafeDate(table.Rows[rowIndex]["StartData"]);
+
+                textBox8.Text = GetSafeDate(table.Rows[rowIndex]["EndData"]);
+
+
+
+                textBox9.Text = GetSafeString(table.Rows[rowIndex]["Status"]);
+
+                textBox10.Text = GetSafeString(table.Rows[rowIndex]["ApplicationNomber"]);
+
+            }
+
+        }
+
+
+
+        private string GetSafeString(object value)
+
+        {
+
+            return value == DBNull.Value ? "" : value.ToString();
+
+        }
+
+
+
+        // Метод для безопасной работы с датами
+
+        private string GetSafeDate(object value)
+
+        {
+
+            if (value == DBNull.Value || value == null)
+
+                return "";
+
+
+
+            try
+
+            {
+
+                return Convert.ToDateTime(value).ToString("yyyy.dd.MM.");
+
+            }
+
+            catch
+
+            {
+
+                return "";
+
+            }
+
+        }
+
+            private void button1_Click(object sender, EventArgs e)
+
+            {
+
+                try
+
+                {
+
+                    // Создаем и открываем новую форму
+
+                    Form3 editForm = new Form3(_summaryId);
+
+                    editForm.ShowDialog();
+
+
+
+                    // После закрытия формы обновляем данные
+
+                    RefreshData();
+
+                }
+
+                catch (Exception ex)
+
+                {
+
+                    MessageBox.Show("Ошибка при открытии формы редактирования: " + ex.Message);
+
+                }
+
+            }
+
+
+
+
+
+
+
+Редактирование данных
+
+namespace Avtoservis
+
+{
+
+    public partial class DetailsForm : Form
+
+    {
+
+        Db db = new Db();
+
+        private int _summaryId;
+
+        private DataTable table;
+
+        private bool isEditing = false; // Флаг режима редактирования
+
+
+
+        public DetailsForm(int summaryId)
+
+        {
+
+            InitializeComponent();
+
+            _summaryId = summaryId;
+
+            this.Load += new EventHandler(DetailsForm_Load);
+
+            button1.Click += new EventHandler(button1_Click); // Добавляем обработчик для кнопки
+
+        }
+
+
+
+        private void DetailsForm_Load(object sender, EventArgs e)
+
+        {
+
+            try
+
+            {
+
+                string query = "SELECT * FROM `application` WHERE ApplicationNomber = @ApplicationNomber";
+
+                using (MySqlConnection connection = db.getConnection())
+
+                {
+
+                    connection.Open();
+
+                    using (MySqlCommand command = new MySqlCommand(query, connection))
+
+                    {
+
+                        command.Parameters.AddWithValue("@ApplicationNomber", _summaryId);
+
+                        MySqlDataAdapter adapter = new MySqlDataAdapter(command);
+
+                        table = new DataTable();
+
+                        adapter.Fill(table);
+
+                        ShowClientDetails(0);
+
+                    }
+
+                }
+
+            }
+
+            catch (Exception ex)
+
+            {
+
+                MessageBox.Show("Ошибка загрузки данных: " + ex.Message);
+
+            }
+
+        }
+
+
+
+        private void ShowClientDetails(int rowIndex)
+
+        {
+
+            if (rowIndex < table.Rows.Count)
+
+            {
+
+                textBox1.Text = GetSafeString(table.Rows[rowIndex]["ProblemPescription"]);
+
+                textBox2.Text = GetSafeString(table.Rows[rowIndex]["TypeOfCar"]);
+
+                textBox3.Text = GetSafeString(table.Rows[rowIndex]["CardBrand"]);
+
+                textBox4.Text = GetSafeString(table.Rows[rowIndex]["Master"]);
+
+                textBox5.Text = GetSafeString(table.Rows[rowIndex]["ClientFIO"]);
+
+                textBox6.Text = GetSafeString(table.Rows[rowIndex]["ClientNumber"]);
+
+                textBox7.Text = GetSafeDate(table.Rows[rowIndex]["StartData"]);
+
+                textBox8.Text = GetSafeDate(table.Rows[rowIndex]["EndData"]);
+
+                textBox9.Text = GetSafeString(table.Rows[rowIndex]["Status"]);
+
+                textBox10.Text = GetSafeString(table.Rows[rowIndex]["ApplicationNomber"]);
+
+            }
+
+        }
+
+
+
+        private string GetSafeString(object value)
+
+        {
+
+            return value == DBNull.Value ? "" : value.ToString();
+
+        }
+
+
+
+        private string GetSafeDate(object value)
+
+        {
+
+            if (value == DBNull.Value || value == null)
+
+                return "";
+
+            try
+
+            {
+
+                return Convert.ToDateTime(value).ToString("dd.MM.yyyy");
+
+            }
+
+            catch
+
+            {
+
+                return "";
+
+            }
+
+        }
+
+
+
+        private void button1_Click(object sender, EventArgs e)
+
+        {
+
+            if (!isEditing)
+
+            {
+
+                // Переключаем в режим редактирования
+
+                isEditing = true;
+
+                button1.Text = "Сохранить";
+
+                
+
+                // Делаем текстовые поля редактируемыми
+
+                textBox1.ReadOnly = false;
+
+                textBox2.ReadOnly = false;
+
+                textBox3.ReadOnly = false;
+
+                textBox4.ReadOnly = false;
+
+                textBox5.ReadOnly = false;
+
+                textBox6.ReadOnly = false;
+
+                textBox7.ReadOnly = false;
+
+                textBox8.ReadOnly = false;
+
+                textBox9.ReadOnly = false;
+
+            }
+
+            else
+
+            {
+
+                // Сохраняем изменения
+
+                try
+
+                {
+
+                    string query = "UPDATE `application` SET " +
+
+                        "`ProblemPescription` = @ProblemPescription, " +
+
+                        "`TypeOfCar` = @TypeOfCar, " +
+
+                        "`CardBrand` = @CardBrand, " +
+
+                        "`Master` = @Master, " +
+
+                        "`ClientFIO` = @ClientFIO, " +
+
+                        "`ClientNumber` = @ClientNumber, " +
+
+                        "`StartData` = @StartData, " +
+
+                        "`EndData` = @EndData, " +
+
+                        "`Status` = @Status " +
+
+                        ""WHERE `ApplicationNomber` = @ApplicationNomber";
+
+
+
+        using (MySqlConnection connection = db.getConnection())
+
+        {
+
+            connection.Open();
+
+            using (MySqlCommand command = new MySqlCommand(query, connection))
+
+            {
+
+                // Добавляем параметры с проверкой на null
+
+                command.Parameters.AddWithValue("@ProblemPescription", textBox1.Text ?? DBNull.Value);
+
+                command.Parameters.AddWithValue("@TypeOfCar", textBox2.Text ?? DBNull.Value);
+
+                command.Parameters.AddWithValue("@CardBrand", textBox3.Text ?? DBNull.Value);
+
+                command.Parameters.AddWithValue("@Master", textBox4.Text ?? DBNull.Value);
+
+                command.Parameters.AddWithValue("@ClientFIO", textBox5.Text);
+
+                command.Parameters.AddWithValue("@ClientNumber", textBox6.Text ?? DBNull.Value);
+
+                
+
+                // Обрабатываем даты
+
+                command.Parameters.AddWithValue("@StartData", string.IsNullOrEmpty(textBox7.Text) ? 
+
+                    DBNull.Value : Convert.ToDateTime(textBox7.Text));
+
+                command.Parameters.AddWithValue("@EndData", string.IsNullOrEmpty(textBox8.Text) ? 
+
+                    DBNull.Value : Convert.ToDateTime(textBox8.Text));
+
+                
+
+                command.Parameters.AddWithValue("@Status", textBox9.Text ?? DBNull.Value);
+
+                command.Parameters.AddWithValue("@ApplicationNomber", _summaryId);
+
+
+
+                // Выполняем обновление
+
+                int rowsAffected = command.ExecuteNonQuery();
+
+
+
+                if (rowsAffected > 0)
+
+                {
+
+                    MessageBox.Show("Данные успешно обновлены");
+
+                    // Обновляем форму
+
+                    ShowClientDetails(0);
+
+                }
+
+                else
+
+                {
+
+                    MessageBox.Show("Запись не найдена");
+
+                }
+
+            }
+
+        }
+
+    }
+
+    catch (Exception ex)
+
+    {
+
+        MessageBox.Show($"Ошибка обновления: {ex.Message}");
+
+    }
+
+}
+
+
+
+
+
+код для добавления данных
+
+
+
+
+
+
+
+namespace Avtoservis
+
+{
+
+    public partial class AddForm : Form
+
+    {
+
+        Db db = new Db();
+
+
+
+        public AddForm()
+
+        {
+
+            InitializeComponent();
+
+        }
+
+
+
+        private void btnAdd_Click(object sender, EventArgs e)
+
+        {
+
+            try
+
+            {
+
+                // Проверяем обязательные поля
+
+                if (string.IsNullOrEmpty(textBoxClientFIO.Text) || 
+
+                    string.IsNullOrEmpty(textBoxClientNumber.Text) ||
+
+                    string.IsNullOrEmpty(textBoxProblem.Text))
+
+                {
+
+                    MessageBox.Show("Заполните все обязательные поля!");
+
+                    return;
+
+                }
+
+
+
+                string query = "INSERT INTO `application` (" +
+
+                    "`ProblemPescription`, " +
+
+                    "`TypeOfCar`, " +
+
+                    "`CardBrand`, " +
+
+                    "`Master`, " +
+
+                    "`ClientFIO`, " +
+
+                    "`ClientNumber`, " +
+
+                    "`StartData`, " +
+
+                    "`EndData`, " +
+
+                    "`Status`, " +
+
+                    "`ApplicationNomber` " +
+
+                    ") VALUES (" +
+
+                    "@ProblemPescription, " +
+
+                    "@TypeOfCar, " +
+
+                    "@CardBrand, " +
+
+                    "@Master, " +
+
+                    "@ClientFIO, " +
+
+                    "@ClientNumber, " +
+
+                    "@StartData, " +
+
+                    "@EndData, " +
+
+                    "@Status, " +
+
+                    "@ApplicationNomber)";
+
+
+
+                using (MySqlConnection connection = db.getConnection())
+
+                {
+
+                    connection.Open();
+
+                    using (MySqlCommand command = new MySqlCommand(query, connection))
+
+                    {
+
+                        command.Parameters.AddWithValue("@ProblemPescription", textBoxProblem.Text);
+
+                        command.Parameters.AddWithValue("@TypeOfCar", textBoxTypeOfCar.Text);
+
+                        command.Parameters.AddWithValue("@CardBrand", textBoxCardBrand.Text);
+
+                        command.Parameters.AddWithValue("@Master", textBoxMaster.Text);
+
+                        command.Parameters.AddWithValue("@ClientFIO", textBoxClientFIO.Text);
+
+                        command.Parameters.AddWithValue("@ClientNumber", textBoxClientNumber.Text);
+
+                        command.Parameters.AddWithValue("@StartData", dateTimePickerStart.Value);
+
+                        command.Parameters.AddWithValue("@EndData", dateTimePickerEnd.Value);
+
+                        command.Parameters.AddWithValue("@Status", comboBoxStatus.Text);
+
+                        command.Parameters.AddWithValue("@ApplicationNomber", GenerateApplicationNumber());
+
+
+
+                        int rowsAffected = command.ExecuteNonQuery();
+
+
+
+                        if (rowsAffected > 0)
+
+                        {
+
+                            MessageBox.Show("Данные успешно добавлены!");
+
+                            ClearFields();
+
+                        }
+
+                        else
+
+                        {
+
+                            MessageBox.Show("Ошибка при добавлении данных!");
+
+                        }
+
+                    }
+
+                }
+
+            }
+
+            catch (Exception ex)
+
+            {
+
+                MessageBox.Show($"Ошибка: {ex.Message}");
+
+            }
+
+        }
+
+
+
+        private void ClearFields()
+
+        {
+
+            textBoxProblem.Text = "";
+
+            textBoxTypeOfCar.Text = "";
+
+            textBoxCardBrand.Text = "";
+
+            textBoxMaster.Text = "";
+
+            textBoxClientFIO.Text = "";
+
+            textBoxClientNumber.Text = "";
+
+            dateTimePickerStart.Value = DateTime.Now;
+
+            dateTimePickerEnd.Value = DateTime.Now;
+
+            comboBoxStatus.Text = "";
+
+        }
+
+
+
+        private int GenerateApplicationNumber()
+
+        {
+
+            string query = "SELECT MAX(ApplicationNomber) FROM application";
+
+            using (MySqlConnection connection = db.getConnection())
+
+            {
+
+                connection.Open();
+
+                using (MySqlCommand command = new MySqlCommand(query, connection))
+
+                {
+
+                    object result = command.ExecuteScalar();
+
+                    return result == null ? 1 : (int)result + 1;
+
+                }
+
+            }
+
+        }
+
+    }
+
+}
+
